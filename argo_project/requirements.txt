@@ -1,0 +1,5 @@
+python-dotenv>=1.0.0
+# (Optional) add other runtime dependencies below if needed by your environment
+# fastapi
+# uvicorn
+# google-generativeai

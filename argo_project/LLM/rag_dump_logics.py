@@ -10,9 +10,7 @@
 # # =========================
 
 # # Configure Gemini API key (set your actual key as ENV variable first!)
-# api_keyy = "AIzaSyBZS3G7dN1RdwY_v4VDE2LDSmotoyO_A7c"
-# # Configure Gemini API key (set your actual key as ENV variable first!)
-# genai.configure(api_key=api_keyy)
+# API key removed from repository. Set `GEMINI_API_KEY` or `GENAI_API_KEY` in your environment or in `argo_project/.env`.
 
 # # Local persistent Chroma
 # client = chromadb.PersistentClient(path="LLM\chroma_store")
@@ -112,9 +110,7 @@
 # # =========================
 # # Setup
 # # =========================
-# api_keyy = "AIzaSyBZS3G7dN1RdwY_v4VDE2LDSmotoyO_A7c"
-# # Configure Gemini API key (set your actual key as ENV variable first!)
-# genai.configure(api_key=api_keyy)
+# # API key removed from repository. Set `GEMINI_API_KEY` or `GENAI_API_KEY` in your environment or in `argo_project/.env`.
 
 # # Local persistent Chroma
 # client = chromadb.PersistentClient(path="./chroma_store")
@@ -231,8 +227,7 @@
 # # 0) Set API key
 # # ------------------------------
 # # You can set your API key in the environment variable or directly
-# os.environ["GENAI_API_KEY"] = "AIzaSyBZS3G7dN1RdwY_v4VDE2LDSmotoyO_A7c"
-# genai.configure(api_key=os.environ["GENAI_API_KEY"])
+# # Removed hardcoded environment assignment. Set `GENAI_API_KEY` in environment or `argo_project/.env` instead.
 
 # # ------------------------------
 # # 1) Initialize Chroma
@@ -467,7 +462,7 @@
 # # ------------------------------
 # # Gemini Setup
 # # ------------------------------
-# api_keyy = "AIzaSyBZS3G7dN1RdwY_v4VDE2LDSmotoyO_A7c"
+# API key removed from repository. Set `GEMINI_API_KEY` or `GENAI_API_KEY` in your environment or in `argo_project/.env`.
 # # Configure Gemini API key (set your actual key as ENV variable first!)
 # genai.configure(api_key=api_keyy)
 # gemini_model = genai.GenerativeModel("gemini-2.0-flash")

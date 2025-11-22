@@ -9,6 +9,7 @@ import chromadb
 from sentence_transformers import SentenceTransformer
 import re
 import os
+from dotenv import load_dotenv
 import google.generativeai as genai
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
@@ -22,9 +23,12 @@ import numpy as np
 from datetime import datetime
 
 # ------------------------------    
-# Gemini Setup
+# Gemini Setup (load key from environment / .env)
 # ------------------------------
-api_keyy = "AIzaSyDFignEWHKB8Er51qaIT89OKSj93UwMi-o"
+load_dotenv()
+api_keyy = os.getenv("GEMINI_API_KEY") or os.getenv("GENAI_API_KEY")
+if not api_keyy:
+    raise RuntimeError("GEMINI_API_KEY (or GENAI_API_KEY) not set. Add it to argo_project/.env or export it in the environment.")
 genai.configure(api_key=api_keyy)
 gemini_model = genai.GenerativeModel("gemini-2.0-flash")
 

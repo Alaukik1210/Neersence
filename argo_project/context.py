@@ -26,7 +26,7 @@
 # # NOTE: It is HIGHLY recommended to load your API key from an environment variable 
 # # or a .env file rather than hardcoding it, as done in the original file.
 # # The hardcoded key below is a placeholder and should be replaced or secured.
-# api_keyy = "AIzaSyDFignEWHKB8Er51qaIT89OKSj93UwMi-o"
+# API key removed from repository. Set `GEMINI_API_KEY` or `GENAI_API_KEY` in your environment or in `argo_project/.env`.
 # genai.configure(api_key=api_keyy)
 # gemini_model = genai.GenerativeModel("gemini-2.0-flash")
 
@@ -436,11 +436,15 @@ from typing import Optional, List, Dict, Any
 import uvicorn
 from fastapi.middleware.cors import CORSMiddleware # Required for Next.js/Frontend access
 
+from dotenv import load_dotenv
+
 # ------------------------------
-# Gemini Setup
+# Gemini Setup (load key from environment / .env)
 # ------------------------------
-# NOTE: Replace with secure loading (e.g., from environment variable or .env file)
-api_keyy = "AIzaSyDFignEWHKB8Er51qaIT89OKSj93UwMi-o"
+load_dotenv()
+api_keyy = os.getenv("GEMINI_API_KEY") or os.getenv("GENAI_API_KEY")
+if not api_keyy:
+    raise RuntimeError("GEMINI_API_KEY (or GENAI_API_KEY) not set. Add it to argo_project/.env or export it in the environment.")
 genai.configure(api_key=api_keyy)
 gemini_model = genai.GenerativeModel("gemini-2.0-flash")
 

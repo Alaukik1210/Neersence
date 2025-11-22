@@ -14,13 +14,16 @@ from sentence_transformers import SentenceTransformer
 from datetime import datetime
 import re
 import os
+from dotenv import load_dotenv
 import google.generativeai as genai
 
 # ------------------------------
-# Gemini Setup
+# Gemini Setup (load key from environment / .env)
 # ------------------------------
-api_keyy = "AIzaSyBZS3G7dN1RdwY_v4VDE2LDSmotoyO_A7c"
-# Configure Gemini API key (set your actual key as ENV variable first!)
+load_dotenv()
+api_keyy = os.getenv("GEMINI_API_KEY") or os.getenv("GENAI_API_KEY")
+if not api_keyy:
+    raise RuntimeError("GEMINI_API_KEY (or GENAI_API_KEY) not set. Add it to argo_project/.env or export it in the environment.")
 genai.configure(api_key=api_keyy)
 gemini_model = genai.GenerativeModel("gemini-2.0-flash")
 
