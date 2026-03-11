@@ -31,34 +31,34 @@ export function DashboardContent() {
       <div className="max-w-7xl mx-auto">
         {/* Main Dashboard */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className={`grid w-full ${isResearcher ? 'grid-cols-6' : 'grid-cols-5'}`}>
-            <TabsTrigger value="overview" className="flex items-center gap-2">
-              <TrendingUp className="h-4 w-4" />
-              Overview
+          <TabsList className={`grid w-full ${isResearcher ? 'grid-cols-6' : 'grid-cols-5'} h-auto p-1 bg-muted/50`}>
+            <TabsTrigger value="overview" className="flex items-center gap-1 md:gap-2 px-2 py-1.5 text-[10px] md:text-sm">
+              <TrendingUp className="h-3 w-3 md:h-4 md:w-4" />
+              <span className="truncate">Overview</span>
             </TabsTrigger>
-            <TabsTrigger value="temperature" className="flex items-center gap-2">
-              <Thermometer className="h-4 w-4" />
-              Temperature
+            <TabsTrigger value="temperature" className="flex items-center gap-1 md:gap-2 px-2 py-1.5 text-[10px] md:text-sm">
+              <Thermometer className="h-3 w-3 md:h-4 md:w-4" />
+              <span className="truncate">Temp</span>
             </TabsTrigger>
-            <TabsTrigger value="salinity" className="flex items-center gap-2">
-              <Droplets className="h-4 w-4" />
-              Salinity
+            <TabsTrigger value="salinity" className="flex items-center gap-1 md:gap-2 px-2 py-1.5 text-[10px] md:text-sm">
+              <Droplets className="h-3 w-3 md:h-4 md:w-4" />
+              <span className="truncate">Salinity</span>
             </TabsTrigger>
             
-            <TabsTrigger value="trajectories" className="flex items-center gap-2">
-              <Map className="h-4 w-4" />
-              Trajectories
+            <TabsTrigger value="trajectories" className="flex items-center gap-1 md:gap-2 px-2 py-1.5 text-[10px] md:text-sm">
+              <Map className="h-3 w-3 md:h-4 md:w-4" />
+              <span className="truncate">Map</span>
             </TabsTrigger>
-            <TabsTrigger value="data" className="flex items-center gap-2">
-              <Table className="h-4 w-4" />
-              Data
+            <TabsTrigger value="data" className="flex items-center gap-1 md:gap-2 px-2 py-1.5 text-[10px] md:text-sm">
+              <Table className="h-3 w-3 md:h-4 md:w-4" />
+              <span className="truncate">Data</span>
             </TabsTrigger>
             
             {/* BGC Data tab - only visible for researchers */}
             {isResearcher && (
-              <TabsTrigger value="bgc" className="flex items-center gap-2">
-                <Waves className="h-4 w-4" />
-                BGC Data
+              <TabsTrigger value="bgc" className="flex items-center gap-1 md:gap-2 px-2 py-1.5 text-[10px] md:text-sm">
+                <Waves className="h-3 w-3 md:h-4 md:w-4" />
+                <span className="truncate">BGC</span>
               </TabsTrigger>
             )}
           </TabsList>

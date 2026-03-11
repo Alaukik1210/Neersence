@@ -55,12 +55,17 @@ const GlassyNavbar = () => {
             {isProfileMenuOpen && (
               <div className="absolute right-0 mt-2 w-48 bg-white/10 backdrop-blur-xl border border-white/20 rounded-xl shadow-xl">
                 <div className="py-2">
-                  <div className="px-4 py-2 border-b border-white/20">
-                    <p className="text-white font-medium">{user.name}</p>
-                    <p className="text-white/70 text-sm">{user.email}</p>
-                    <p className="text-white/60 text-xs mt-1">
-                      {user.role === 'RESEARCHER' ? 'Researcher' : 'Non-Technical User'}
-                    </p>
+                  <div className="px-4 py-3 border-b border-white/20">
+                    <p className="text-white font-semibold text-base">{user.name}</p>
+                    <p className="text-white/60 text-[10px] truncate mb-2">{user.email}</p>
+                    <div className="flex gap-2">
+                      <span className="px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 text-[10px] font-medium border border-blue-500/30">
+                        {user.role === 'RESEARCHER' ? 'Researcher' : 'Standard'}
+                      </span>
+                      <span className="px-2 py-0.5 rounded-full bg-white/10 text-white/70 text-[10px] font-medium border border-white/20">
+                        Active
+                      </span>
+                    </div>
                   </div>
                   <Link 
                     href="/profile" 

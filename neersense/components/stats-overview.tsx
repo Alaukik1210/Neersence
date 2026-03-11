@@ -134,28 +134,28 @@ export function StatsOverview({ selectedFloat, timeRange }: StatsOverviewProps) 
         </div>
       )}
       {/* Key Statistics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
         {stats.map((stat, index) => (
-          <Card key={index}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">{stat.title}</CardTitle>
-              <stat.icon className={`h-4 w-4 ${stat.color}`} />
+          <Card key={index} className="bg-white border-none shadow-sm">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 md:pb-2 p-3 md:p-6">
+              <CardTitle className="text-[10px] md:text-sm font-medium text-slate-500 uppercase tracking-wider">{stat.title}</CardTitle>
+              <stat.icon className={`h-3 w-3 md:h-4 md:w-4 ${stat.color}`} />
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stat.value}</div>
-              <p className="text-xs text-muted-foreground">
+            <CardContent className="p-3 md:p-6 pt-0 md:pt-0">
+              <div className="text-lg md:text-2xl font-bold text-slate-900">{stat.value}</div>
+              <p className="text-[9px] md:text-xs text-muted-foreground mt-1">
                 <span
                   className={
                     stat.trend === "up"
-                      ? "text-green-600"
+                      ? "text-green-600 font-medium"
                       : stat.trend === "down"
-                        ? "text-red-600"
+                        ? "text-red-600 font-medium"
                         : "text-muted-foreground"
                   }
                 >
                   {stat.change}
                 </span>{" "}
-                from last period
+                vs last period
               </p>
             </CardContent>
           </Card>

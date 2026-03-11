@@ -15,10 +15,10 @@ export function DashboardHeader() {
       <div className="max-w-7xl mx-auto">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight text-foreground">
+            <h1 className="text-xl md:text-3xl font-bold tracking-tight text-foreground">
               <span className="text-white">Data Dashboard</span>
             </h1>
-            <p className="mt-2 text-lg text-muted-foreground">
+            <p className="mt-1 md:mt-2 text-sm md:text-lg text-muted-foreground">
               Interactive visualization and analysis of ARGO float oceanographic data
             </p>
           </div>
