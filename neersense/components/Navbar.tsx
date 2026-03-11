@@ -113,22 +113,22 @@ const GlassyNavbar = () => {
             {/* Logo - Mobile */}
             <div className="md:hidden">
               <Image
-                src="/logo.png"
+                src="/Logo.png"
                 alt="Logo"
                 width={40}
                 height={40}
-                className="rounded-full"
+                className="rounded-full shadow-lg border border-white/10"
               />
             </div>
 
             {/* Desktop Navigation Links */}
             <div className="hidden md:flex items-center space-x-4 lg:space-x-8 w-full justify-between">
               <Image
-                src="/logo.png"
+                src="/Logo.png"
                 alt="Logo"
                 width={50}
                 height={50}
-                className="rounded-full"
+                className="rounded-full shadow-xl border border-white/20 hover:scale-105 transition-transform duration-300"
               />
               <div className="flex items-center space-x-6 lg:space-x-8">
                 <Link 
@@ -187,68 +187,74 @@ const GlassyNavbar = () => {
 
           {/* Mobile Navigation Menu */}
           {isMenuOpen && (
-            <div className="md:hidden mt-4 pt-4 border-t border-white/20">
-              <div className="flex flex-col space-y-2">
+            <div className="md:hidden mt-4 pt-4 border-t border-white/20 animate-in fade-in slide-in-from-top-4 duration-300">
+              <div className="flex flex-col space-y-1">
                 <Link 
                   href="/" 
-                  className="text-white hover:text-white/80 transition-all duration-300 font-medium text-lg px-4 py-3 rounded-full hover:bg-white/10"
+                  className="text-white hover:text-white/80 transition-all duration-300 font-medium text-base px-4 py-3 rounded-2xl hover:bg-white/10 flex items-center"
                   onClick={() => setIsMenuOpen(false)}
                 >
                   Home
                 </Link>
                 <Link 
                   href="/floatchat" 
-                  className="text-white hover:text-white/80 transition-all duration-300 font-medium text-lg px-4 py-3 rounded-full hover:bg-white/10"
+                  className="text-white hover:text-white/80 transition-all duration-300 font-medium text-base px-4 py-3 rounded-2xl hover:bg-white/10 flex items-center"
                   onClick={() => setIsMenuOpen(false)}
                 >
                   FloatChat
                 </Link>
                 <Link 
                   href="/dashboard" 
-                  className="text-white hover:text-white/80 transition-all duration-300 font-medium text-lg px-4 py-3 rounded-full hover:bg-white/10"
+                  className="text-white hover:text-white/80 transition-all duration-300 font-medium text-base px-4 py-3 rounded-2xl hover:bg-white/10 flex items-center"
                   onClick={() => setIsMenuOpen(false)}
                 >
                   Dashboard
                 </Link>
                 <Link 
                   href="/map" 
-                  className="text-white hover:text-white/80 transition-all duration-300 font-medium text-lg px-4 py-3 rounded-full hover:bg-white/10"
+                  className="text-white hover:text-white/80 transition-all duration-300 font-medium text-base px-4 py-3 rounded-2xl hover:bg-white/10 flex items-center"
                   onClick={() => setIsMenuOpen(false)}
                 >
                   Map
                 </Link>
                 <Link 
                   href="/about" 
-                  className="text-white hover:text-white/80 transition-all duration-300 font-medium text-lg px-4 py-3 rounded-full hover:bg-white/10"
+                  className="text-white hover:text-white/80 transition-all duration-300 font-medium text-base px-4 py-3 rounded-2xl hover:bg-white/10 flex items-center"
                   onClick={() => setIsMenuOpen(false)}
                 >
                   About
                 </Link>
                 
-                
                 {/* Mobile Auth Section */}
-                <div className="border-t border-white/20 pt-2">
-                  {user ? (
-                    <div className="px-4 py-2">
-                      <p className="text-white font-medium">{user.name}</p>
-                      <p className="text-white/70 text-sm">{user.role === 'RESEARCHER' ? 'Researcher' : 'Non-Technical'}</p>
-                      <button 
-                        onClick={handleLogout}
-                        className="mt-2 text-white/80 hover:text-white text-sm"
-                      >
-                        Logout
-                      </button>
+                {user ? (
+                  <div className="mt-2 py-3 px-4 bg-white/5 rounded-2xl border border-white/10">
+                    <div className="flex items-center space-x-3 mb-2">
+                      <div className="bg-blue-500/20 p-2 rounded-full">
+                        <Image src="/auth.svg" alt="U" width={20} height={20} />
+                      </div>
+                      <div>
+                        <p className="text-white font-semibold text-sm leading-none">{user.name}</p>
+                        <p className="text-white/50 text-[10px] mt-1 uppercase tracking-wider">
+                          {user.role === 'RESEARCHER' ? 'Researcher' : 'User'}
+                        </p>
+                      </div>
                     </div>
-                  ) : (
-                    <Link 
-                      href="/signup" 
-                      className="text-white hover:text-white/80 transition-all duration-300 font-medium text-lg px-4 py-3 rounded-full hover:bg-white/10"
-                      onClick={() => setIsMenuOpen(false)}
+                    <button 
+                      onClick={handleLogout}
+                      className="w-full mt-2 py-2 text-red-300 hover:text-red-200 text-xs font-medium border border-red-500/20 rounded-xl hover:bg-red-500/10 transition-all"
                     >
-                      Sign Up
-                    </Link>
-                  )}
-                </div>
+                      Logout Session
+                    </button>
+                  </div>
+                ) : (
+                  <Link 
+                    href="/signup" 
+                    className="mt-2 text-center bg-white text-blue-900 hover:bg-white/90 transition-all duration-300 font-bold text-sm px-4 py-3 rounded-2xl shadow-lg"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    Get Started
+                  </Link>
+                )}
               </div>
             </div>
           )}
