@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { getMockSalinityData, type SalinityData } from "@/lib/dashboard-mock-data"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
@@ -23,34 +24,29 @@ interface SalinityChartsProps {
   timeRange: string
 }
 
-interface SalinityData {
-  salinityDepthData: Array<{
-    depth: number
-    salinity: number
-    min_salinity: number
-    max_salinity: number
-    float1?: number
-    float2?: number
-    float3?: number
-  }>
-  salinityTimeData: Array<{
-    date: string
-    salinity: number
-    min: number
-    max: number
-  }>
-  salinityDistribution: Array<{
-    range: string
-    count: number
-    percentage: number
-  }>
-  floatComparison: string[]
+type SalinityApiResponse = Partial<SalinityData> & {
+  fallback?: boolean
+}
+
+function normalizeSalinityData(result: unknown): SalinityData {
+  if (!result || typeof result !== "object") {
+    return getMockSalinityData()
+  }
+
+  const data = result as Partial<SalinityData>
+  return {
+    salinityDepthData: Array.isArray(data.salinityDepthData) ? data.salinityDepthData : getMockSalinityData().salinityDepthData,
+    salinityTimeData: Array.isArray(data.salinityTimeData) ? data.salinityTimeData : getMockSalinityData().salinityTimeData,
+    salinityDistribution: Array.isArray(data.salinityDistribution) ? data.salinityDistribution : getMockSalinityData().salinityDistribution,
+    floatComparison: Array.isArray(data.floatComparison) ? data.floatComparison : getMockSalinityData().floatComparison,
+  }
 }
 
 export function SalinityCharts({ selectedFloat, timeRange }: SalinityChartsProps) {
-  const [data, setData] = useState<SalinityData | null>(null)
+  const [data, setData] = useState<SalinityData>(getMockSalinityData(selectedFloat))
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [isFallback, setIsFallback] = useState(false)
 
   useEffect(() => {
     fetchSalinityData()
@@ -72,10 +68,26 @@ export function SalinityCharts({ selectedFloat, timeRange }: SalinityChartsProps
         throw new Error('Failed to fetch salinity data')
       }
       
-      const result = await response.json()
-      setData(result)
+      const result = (await response.json()) as SalinityApiResponse
+      const normalized = normalizeSalinityData(result)
+      const hasNoSeries =
+        normalized.salinityDepthData.length === 0 &&
+        normalized.salinityTimeData.length === 0 &&
+        normalized.salinityDistribution.length === 0
+
+      if (result.fallback || hasNoSeries) {
+        setData(getMockSalinityData(selectedFloat))
+        setIsFallback(true)
+        setError(result.fallback ? "Backend fallback response received" : "Backend returned empty data")
+      } else {
+        setData(normalized)
+        setIsFallback(false)
+        setError(null)
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred')
+      setData(getMockSalinityData(selectedFloat))
+      setIsFallback(true)
     } finally {
       setLoading(false)
     }
@@ -91,25 +103,6 @@ export function SalinityCharts({ selectedFloat, timeRange }: SalinityChartsProps
     return <SalinityLoadingSkeleton />
   }
 
-  if (error) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-center">
-          <p className="text-red-500 mb-2">Error loading salinity data</p>
-          <p className="text-sm text-muted-foreground">{error}</p>
-          <button 
-            onClick={fetchSalinityData}
-            className="mt-4 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
-          >
-            Retry
-          </button>
-        </div>
-      </div>
-    )
-  }
-
-  if (!data) return null
-
   // Process time series data with simplified dates
   const processedTimeData = data.salinityTimeData.map(item => ({
     ...item,
@@ -118,6 +111,11 @@ export function SalinityCharts({ selectedFloat, timeRange }: SalinityChartsProps
 
   return (
     <div className="space-y-6">
+      {isFallback && (
+        <div className="rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-amber-800">
+          Using mock salinity data because backend request failed{error ? `: ${error}` : "."}
+        </div>
+      )}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Salinity vs Depth Profile */}
         <Card>
@@ -145,9 +143,14 @@ export function SalinityCharts({ selectedFloat, timeRange }: SalinityChartsProps
                 />
                 <Tooltip
                   formatter={(value, name) => [
-                    `${parseFloat(value as string).toFixed(2)} PSU`, 
-                    name === "salinity" ? "Average Salinity" : 
-                    name.startsWith("float") ? `Float ${name.slice(-1)}` : name
+                    `${Number.isFinite(Number(value)) ? Number(value).toFixed(2) : "0.00"} PSU`, 
+                    typeof name === "string"
+                      ? name === "salinity"
+                        ? "Average Salinity"
+                        : name.startsWith("float")
+                          ? `Float ${name.slice(-1)}`
+                          : name
+                      : String(name)
                   ]}
                   labelFormatter={(label) => `Depth: ${label}m`}
                 />
@@ -200,8 +203,14 @@ export function SalinityCharts({ selectedFloat, timeRange }: SalinityChartsProps
                 <YAxis label={{ value: "Salinity (PSU)", angle: -90, position: "insideLeft" }} />
                 <Tooltip 
                   formatter={(value, name) => [
-  value != null ? `${parseFloat(value as string).toFixed(2)} PSU` : "N/A",
-  name === "salinity" ? "Average Salinity" : name.startsWith("float") ? `Float ${name.slice(-1)}` : name
+  value != null && Number.isFinite(Number(value)) ? `${Number(value).toFixed(2)} PSU` : "N/A",
+  typeof name === "string"
+    ? name === "salinity"
+      ? "Average Salinity"
+      : name.startsWith("float")
+        ? `Float ${name.slice(-1)}`
+        : name
+    : String(name)
 ]}
 
                   labelFormatter={(label, payload) => {

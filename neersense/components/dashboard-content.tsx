@@ -24,7 +24,7 @@ export function DashboardContent() {
   // console.log("User role:", user?.role)
   
   // Check if user is a researcher - matches navbar logic
-  const isResearcher = user && user.role === 'RESEARCHER'
+  const isResearcher = user?.role === 'RESEARCHER'
 
   return (
     <div className="py-8 px-4 sm:px-6 lg:px-8">

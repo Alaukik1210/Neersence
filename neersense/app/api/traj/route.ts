@@ -5,6 +5,18 @@ const pool = new Pool({
   connectionString: process.env.DATABASE_URL_SQL,
 })
 
+interface RawArgoRow {
+  platform_number: string | number
+  cycle_number: string | number | null
+  juld: string | Date | null
+  platform_type: string | null
+  latitude: string | number | null
+  longitude: string | number | null
+  temp: string | number | null
+  psal: string | number | null
+  pres: string | number | null
+}
+
 interface Position {
   lat: number
   lon: number
@@ -34,6 +46,11 @@ interface Trajectory {
   }
 }
 
+function toNumber(value: unknown, fallback = 0): number {
+  const parsed = Number(value)
+  return Number.isFinite(parsed) ? parsed : fallback
+}
+
 function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 6371 // Earth's radius in kilometers
   const dLat = (lat2 - lat1) * Math.PI / 180
@@ -46,10 +63,10 @@ function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: numbe
   return R * c
 }
 
-function processTrajectoryData(rawData: any[]): Trajectory[] {
+function processTrajectoryData(rawData: RawArgoRow[]): Trajectory[] {
   // Group data by platform_number
-  const grouped = rawData.reduce((acc, row) => {
-    const platformId = row.platform_number.toString()
+  const grouped = rawData.reduce<Record<string, RawArgoRow[]>>((acc, row) => {
+    const platformId = String(row.platform_number)
     if (!acc[platformId]) {
       acc[platformId] = []
     }
@@ -59,23 +76,27 @@ function processTrajectoryData(rawData: any[]): Trajectory[] {
 
   const trajectories: Trajectory[] = []
 
-  Object.entries(grouped).forEach(([platformId, positions]) => {
+  Object.entries(grouped).forEach(([platformId, positions]: [string, RawArgoRow[]]) => {
     if (positions.length === 0) return
 
     // Sort positions by date
     const sortedPositions = positions.sort((a, b) => 
-      new Date(a.juld).getTime() - new Date(b.juld).getTime()
+      new Date(String(a.juld ?? '')).getTime() - new Date(String(b.juld ?? '')).getTime()
     )
 
-    const processedPositions: Position[] = sortedPositions.map(pos => ({
-      lat: parseFloat(pos.latitude),
-      lon: parseFloat(pos.longitude),
-      date: pos.juld,
-      cycle: pos.cycle_number,
-      depth: pos.pres ? parseFloat(pos.pres) : undefined,
-      temperature: pos.temp ? parseFloat(pos.temp) : undefined,
-      salinity: pos.psal ? parseFloat(pos.psal) : undefined,
-    }))
+    const processedPositions: Position[] = sortedPositions
+      .map((pos) => ({
+        lat: toNumber(pos.latitude),
+        lon: toNumber(pos.longitude),
+        date: String(pos.juld ?? ''),
+        cycle: toNumber(pos.cycle_number),
+        depth: pos.pres != null ? toNumber(pos.pres) : undefined,
+        temperature: pos.temp != null ? toNumber(pos.temp) : undefined,
+        salinity: pos.psal != null ? toNumber(pos.psal) : undefined,
+      }))
+      .filter((position) => Number.isFinite(position.lat) && Number.isFinite(position.lon) && position.date.length > 0)
+
+    if (processedPositions.length === 0) return
 
     // Calculate total distance
     let totalDistance = 0
@@ -105,7 +126,7 @@ function processTrajectoryData(rawData: any[]): Trajectory[] {
     const trajectory: Trajectory = {
       id: platformId,
       name: `Float ${platformId}`,
-      type: sortedPositions[0].platform_type || 'Unknown',
+      type: sortedPositions[0]?.platform_type || 'Unknown',
       startDate: earliestPosition.date,
       status,
       positions: processedPositions,
@@ -139,7 +160,7 @@ async function getArgoData(startDate: string, endDate: string, floatId?: string)
       AND juld < $2::timestamptz
   `
   
-  const params: any[] = [startDate, endDate]
+  const params: (string | number)[] = [startDate, endDate]
   
   if (floatId) {
     query += ` AND platform_number = $3`
@@ -149,7 +170,7 @@ async function getArgoData(startDate: string, endDate: string, floatId?: string)
   query += ` ORDER BY platform_number, juld ASC`
 
   try {
-    const res = await pool.query(query, params)
+    const res = await pool.query<RawArgoRow>(query, params)
     return res.rows
   } catch (err) {
     console.error('Database query error:', err)
@@ -162,7 +183,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const startDate = searchParams.get('startDate') || '2024-01-01'
     const endDate = searchParams.get('endDate') || '2024-12-31'
-    const floatId = searchParams.get('floatId')
+    const floatId = searchParams.get('floatId') || undefined
 
     console.log('Fetching trajectories:', { startDate, endDate, floatId })
 
@@ -191,12 +212,16 @@ export async function GET(request: NextRequest) {
       count: limitedTrajectories.length,
       data: limitedTrajectories,
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error in GET request:', error)
-    return NextResponse.json(
-      { success: false, error: error.message || 'Internal Server Error' },
-      { status: 500 }
-    )
+    const errorMessage = error instanceof Error ? error.message : 'Internal Server Error'
+    return NextResponse.json({
+      success: true,
+      count: 0,
+      data: [],
+      fallback: true,
+      message: `Fallback trajectory data returned: ${errorMessage}`,
+    })
   }
 }
 
@@ -258,10 +283,11 @@ export async function POST(request: NextRequest) {
       success: true,
       message: 'Data added successfully',
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error in POST request:', error)
+    const errorMessage = error instanceof Error ? error.message : 'Internal Server Error'
     return NextResponse.json(
-      { success: false, error: error.message || 'Internal Server Error' },
+      { success: false, error: errorMessage },
       { status: 500 }
     )
   }

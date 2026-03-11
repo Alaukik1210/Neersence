@@ -18,7 +18,7 @@ export function FloatTrajectories({ selectedFloat, timeRange }: FloatTrajectorie
   const [selectedTrajectory, setSelectedTrajectory] = useState<string | null>(null)
   
   // Use the custom hook with debugging
-  const { trajectories, loading, error, refetch } = useTrajectories({
+  const { trajectories, loading, error, isFallback, fallbackMessage, refetch } = useTrajectories({
     floatId: selectedFloat,
     autoRefresh: true,
     refreshInterval: 60000 // Refresh every minute
@@ -28,6 +28,8 @@ export function FloatTrajectories({ selectedFloat, timeRange }: FloatTrajectorie
     trajectoriesCount: trajectories.length, 
     loading, 
     error,
+    isFallback,
+    fallbackMessage,
     selectedFloat,
     timeRange 
   })
@@ -37,26 +39,14 @@ export function FloatTrajectories({ selectedFloat, timeRange }: FloatTrajectorie
     refetch()
   }
 
-  if (error) {
-    return (
-      <div className="space-y-6">
-        <Card>
-          <CardContent className="p-6">
-            <div className="text-center text-red-600">
-              <p>Error loading trajectories: {error}</p>
-              <Button onClick={handleRefresh} className="mt-4">
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Retry
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    )
-  }
-
   return (
     <div className="space-y-6">
+      {(isFallback || error) && (
+        <div className="rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-amber-800">
+          Using mock trajectory data because backend request failed
+          {fallbackMessage ? `: ${fallbackMessage}` : error ? `: ${error}` : "."}
+        </div>
+      )}
       {/* Interactive Trajectory Map */}
       <Card>
         <CardHeader>
@@ -227,6 +217,8 @@ export function FloatTrajectories({ selectedFloat, timeRange }: FloatTrajectorie
             <div className="text-xs space-y-1 font-mono">
               <div>Loading: {loading.toString()}</div>
               <div>Error: {error || 'none'}</div>
+              <div>Fallback: {isFallback.toString()}</div>
+              <div>Fallback Message: {fallbackMessage || 'none'}</div>
               <div>Trajectories Count: {trajectories.length}</div>
               <div>Selected Float: {selectedFloat || 'none'}</div>
               <div>Selected Trajectory: {selectedTrajectory || 'none'}</div>

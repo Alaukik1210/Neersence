@@ -1,10 +1,11 @@
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
+import type { SignOptions } from 'jsonwebtoken'
 import { prisma } from './db'
 import { UserRole } from '@prisma/client'
 
-const JWT_SECRET = process.env.JWT_SECRET!
-const JWT_EXPIRY = process.env.JWT_EXPIRY || '7d'
+const JWT_SECRET = process.env.JWT_SECRET ?? 'neersense-dev-secret'
+const JWT_EXPIRY: SignOptions['expiresIn'] = (process.env.JWT_EXPIRY as SignOptions['expiresIn']) ?? '7d'
 
 export interface AuthUser {
   id: string
@@ -51,7 +52,14 @@ export function generateToken(user: AuthUser): string {
 // Verify JWT token
 export function verifyToken(token: string): AuthUser | null {
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as any
+    const decoded = jwt.verify(token, JWT_SECRET) as {
+      userId?: string
+      email?: string
+      role?: UserRole
+    }
+    if (!decoded.userId || !decoded.email || !decoded.role) {
+      return null
+    }
     return {
       id: decoded.userId,
       email: decoded.email,

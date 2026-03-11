@@ -1,34 +1,6 @@
 // hooks/useTrajectories.ts
 import { useState, useEffect, useCallback } from 'react'
-
-interface Position {
-  lat: number
-  lon: number
-  date: string
-  cycle: number
-  depth?: number
-  temperature?: number
-  salinity?: number
-}
-
-interface Trajectory {
-  id: string
-  name: string
-  type: string
-  startDate: string
-  status: string
-  positions: Position[]
-  distance: string
-  totalCycles: number
-  latestPosition: Position
-  earliestPosition: Position
-  bounds: {
-    north: number
-    south: number
-    east: number
-    west: number
-  }
-}
+import { getMockTrajectories, type Trajectory } from '@/lib/dashboard-mock-data'
 
 interface UseTrajectoriesParams {
   floatId?: string
@@ -41,7 +13,17 @@ interface UseTrajectoriesReturn {
   trajectories: Trajectory[]
   loading: boolean
   error: string | null
+  isFallback: boolean
+  fallbackMessage: string | null
   refetch: () => Promise<void>
+}
+
+interface TrajectoryApiResponse {
+  success?: boolean
+  data?: unknown
+  error?: string
+  fallback?: boolean
+  message?: string
 }
 
 export function useTrajectories({
@@ -53,6 +35,8 @@ export function useTrajectories({
   const [trajectories, setTrajectories] = useState<Trajectory[]>([])
   const [loading, setLoading] = useState(true) // Start with loading = true
   const [error, setError] = useState<string | null>(null)
+  const [isFallback, setIsFallback] = useState(false)
+  const [fallbackMessage, setFallbackMessage] = useState<string | null>(null)
 
   // 🔒 Hardcoded date range (Jan 2024 - Dec 2024)
   const startDate = "2024-01-01"
@@ -61,6 +45,13 @@ export function useTrajectories({
   const fetchTrajectories = useCallback(async () => {
     setLoading(true)
     setError(null)
+
+    const applyFallback = (message: string) => {
+      setTrajectories(getMockTrajectories(floatId))
+      setIsFallback(true)
+      setFallbackMessage(message)
+      setError(null)
+    }
     
     try {
       console.log('Fetching trajectories with params:', { floatId, startDate, endDate, status })
@@ -80,29 +71,37 @@ export function useTrajectories({
       if (!response.ok) {
         const errorText = await response.text()
         console.error('Response error:', errorText)
-        throw new Error(`HTTP error! status: ${response.status} - ${errorText}`)
+        applyFallback(`HTTP ${response.status}: trajectory API unavailable`)
+        return
       }
       
-      const data = await response.json()
+      const data = (await response.json()) as TrajectoryApiResponse
       console.log('Response data:', data)
       
       if (!data.success) {
-        throw new Error(data.error || 'Failed to fetch trajectories')
+        applyFallback(data.error || 'Trajectory API reported failure')
+        return
+      }
+
+      if (data.fallback) {
+        applyFallback(data.message || 'Trajectory API returned fallback mode')
+        return
       }
       
       // Validate that we have trajectory data in the expected format
       if (!Array.isArray(data.data)) {
         console.warn('Expected array of trajectories, got:', typeof data.data)
-        setTrajectories([])
+        applyFallback('Trajectory payload format invalid')
       } else {
         console.log(`Successfully loaded ${data.data.length} trajectories`)
-        setTrajectories(data.data)
+        setTrajectories(data.data as Trajectory[])
+        setIsFallback(false)
+        setFallbackMessage(null)
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred'
       console.error('Error fetching trajectories:', err)
-      setError(errorMessage)
-      setTrajectories([]) // Set empty array on error
+      applyFallback(errorMessage)
     } finally {
       setLoading(false)
     }
@@ -129,6 +128,8 @@ export function useTrajectories({
     trajectories,
     loading,
     error,
+    isFallback,
+    fallbackMessage,
     refetch: fetchTrajectories
   }
 }

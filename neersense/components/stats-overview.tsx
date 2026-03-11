@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { getMockStatsData, type StatsData } from "@/lib/dashboard-mock-data"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
@@ -24,45 +25,30 @@ interface StatsOverviewProps {
   timeRange: string
 }
 
-interface StatsData {
-  overviewData: Array<{
-    date: string
-    temperature: number
-    salinity: number
-    pressure: number
-  }>
-  stats: {
-    avgTemperature: string
-    avgSalinity: string
-    maxDepth: number
-    activeFloats: number
-    tempChange: string
-    salChange: string
+function normalizeStatsData(result: unknown): StatsData | null {
+  if (!result || typeof result !== "object") {
+    return null
   }
-  floatTypeData: Array<{
-    name: string
-    value: number
-    color: string
-  }>
-  qualityMetrics: {
-    temperature: number
-    salinity: number
-    pressure: number
-    gps: number
+
+  const data = result as Partial<StatsData>
+  if (
+    !Array.isArray(data.overviewData) ||
+    !data.stats ||
+    !Array.isArray(data.floatTypeData) ||
+    !data.qualityMetrics ||
+    !Array.isArray(data.recentActivity)
+  ) {
+    return null
   }
-  recentActivity: Array<{
-    float: string
-    action: string
-    time: string
-    depth: string
-    status: string
-  }>
+
+  return data as StatsData
 }
 
 export function StatsOverview({ selectedFloat, timeRange }: StatsOverviewProps) {
-  const [data, setData] = useState<StatsData | null>(null)
+  const [data, setData] = useState<StatsData>(getMockStatsData())
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [isFallback, setIsFallback] = useState(false)
 
   useEffect(() => {
     fetchStatsData()
@@ -82,9 +68,20 @@ export function StatsOverview({ selectedFloat, timeRange }: StatsOverviewProps) 
       }
       
       const result = await response.json()
-      setData(result)
+      const normalized = normalizeStatsData(result)
+      if (!normalized || normalized.overviewData.length === 0) {
+        setData(getMockStatsData())
+        setIsFallback(true)
+        setError("Backend returned empty/invalid data")
+      } else {
+        setData(normalized)
+        setIsFallback(false)
+        setError(null)
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred')
+      setData(getMockStatsData())
+      setIsFallback(true)
     } finally {
       setLoading(false)
     }
@@ -93,25 +90,6 @@ export function StatsOverview({ selectedFloat, timeRange }: StatsOverviewProps) 
   if (loading) {
     return <StatsLoadingSkeleton />
   }
-
-  if (error) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-center">
-          <p className="text-red-500 mb-2">Error loading stats</p>
-          <p className="text-sm text-muted-foreground">{error}</p>
-          <button 
-            onClick={fetchStatsData}
-            className="mt-4 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
-          >
-            Retry
-          </button>
-        </div>
-      </div>
-    )
-  }
-
-  if (!data) return null
 
   const stats = [
     {
@@ -150,6 +128,11 @@ export function StatsOverview({ selectedFloat, timeRange }: StatsOverviewProps) 
 
   return (
     <div className="space-y-6">
+      {isFallback && (
+        <div className="rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-amber-800">
+          Using mock dashboard stats because backend data is unavailable{error ? `: ${error}` : "."}
+        </div>
+      )}
       {/* Key Statistics */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {stats.map((stat, index) => (

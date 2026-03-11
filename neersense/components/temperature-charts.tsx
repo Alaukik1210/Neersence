@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { getMockTemperatureData, type TemperatureData } from "@/lib/dashboard-mock-data"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
@@ -23,34 +24,29 @@ interface TemperatureChartsProps {
   timeRange: string
 }
 
-interface TemperatureData {
-  temperatureDepthData: Array<{
-    depth: number
-    temperature: number
-    min_temp: number
-    max_temp: number
-    float1?: number
-    float2?: number
-    float3?: number
-  }>
-  temperatureTimeData: Array<{
-    date: string
-    temperature: number
-    min: number
-    max: number
-  }>
-  temperatureSalinityData: Array<{
-    temperature: number
-    salinity: number
-    depth: number
-  }>
-  floatComparison: string[]
+type TemperatureApiResponse = Partial<TemperatureData> & {
+  fallback?: boolean
+}
+
+function normalizeTemperatureData(result: unknown): TemperatureData {
+  if (!result || typeof result !== "object") {
+    return getMockTemperatureData()
+  }
+
+  const data = result as Partial<TemperatureData>
+  return {
+    temperatureDepthData: Array.isArray(data.temperatureDepthData) ? data.temperatureDepthData : getMockTemperatureData().temperatureDepthData,
+    temperatureTimeData: Array.isArray(data.temperatureTimeData) ? data.temperatureTimeData : getMockTemperatureData().temperatureTimeData,
+    temperatureSalinityData: Array.isArray(data.temperatureSalinityData) ? data.temperatureSalinityData : getMockTemperatureData().temperatureSalinityData,
+    floatComparison: Array.isArray(data.floatComparison) ? data.floatComparison : getMockTemperatureData().floatComparison,
+  }
 }
 
 export function TemperatureCharts({ selectedFloat, timeRange }: TemperatureChartsProps) {
-  const [data, setData] = useState<TemperatureData | null>(null)
+  const [data, setData] = useState<TemperatureData>(getMockTemperatureData(selectedFloat))
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [isFallback, setIsFallback] = useState(false)
 
   useEffect(() => {
     fetchTemperatureData()
@@ -72,10 +68,26 @@ export function TemperatureCharts({ selectedFloat, timeRange }: TemperatureChart
         throw new Error('Failed to fetch temperature data')
       }
       
-      const result = await response.json()
-      setData(result)
+      const result = (await response.json()) as TemperatureApiResponse
+      const normalized = normalizeTemperatureData(result)
+      const hasNoSeries =
+        normalized.temperatureDepthData.length === 0 &&
+        normalized.temperatureTimeData.length === 0 &&
+        normalized.temperatureSalinityData.length === 0
+
+      if (result.fallback || hasNoSeries) {
+        setData(getMockTemperatureData(selectedFloat))
+        setIsFallback(true)
+        setError(result.fallback ? "Backend fallback response received" : "Backend returned empty data")
+      } else {
+        setData(normalized)
+        setIsFallback(false)
+        setError(null)
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred')
+      setData(getMockTemperatureData(selectedFloat))
+      setIsFallback(true)
     } finally {
       setLoading(false)
     }
@@ -91,25 +103,6 @@ export function TemperatureCharts({ selectedFloat, timeRange }: TemperatureChart
     return <TemperatureLoadingSkeleton />
   }
 
-  if (error) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-center">
-          <p className="text-red-500 mb-2">Error loading temperature data</p>
-          <p className="text-sm text-muted-foreground">{error}</p>
-          <button 
-            onClick={fetchTemperatureData}
-            className="mt-4 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
-          >
-            Retry
-          </button>
-        </div>
-      </div>
-    )
-  }
-
-  if (!data) return null
-
   // Process time series data with simplified dates
   const processedTimeData = data.temperatureTimeData.map(item => ({
     ...item,
@@ -118,6 +111,11 @@ export function TemperatureCharts({ selectedFloat, timeRange }: TemperatureChart
 
   return (
     <div className="space-y-6">
+      {isFallback && (
+        <div className="rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-amber-800">
+          Using mock temperature data because backend request failed{error ? `: ${error}` : "."}
+        </div>
+      )}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Temperature vs Depth Profile */}
         <Card>
@@ -145,9 +143,14 @@ export function TemperatureCharts({ selectedFloat, timeRange }: TemperatureChart
                 />
                 <Tooltip
                   formatter={(value, name) => [
-                    `${parseFloat(value as string).toFixed(1)}°C`, 
-                    name === "temperature" ? "Average Temperature" : 
-                    name.startsWith("float") ? `Float ${name.slice(-1)}` : name
+                    `${Number.isFinite(Number(value)) ? Number(value).toFixed(1) : "0.0"}°C`, 
+                    typeof name === "string"
+                      ? name === "temperature"
+                        ? "Average Temperature"
+                        : name.startsWith("float")
+                          ? `Float ${name.slice(-1)}`
+                          : name
+                      : String(name)
                   ]}
                   labelFormatter={(label) => `Depth: ${label}m`}
                 />
@@ -200,7 +203,7 @@ export function TemperatureCharts({ selectedFloat, timeRange }: TemperatureChart
                 <YAxis label={{ value: "Temperature (°C)", angle: -90, position: "insideLeft" }} />
                 <Tooltip 
                   formatter={(value, name) => [
-                    `${parseFloat(value as string).toFixed(1)}°C`, 
+                    `${Number.isFinite(Number(value)) ? Number(value).toFixed(1) : "0.0"}°C`, 
                     name === "temperature" ? "Average" : 
                     name === "max" ? "Maximum" : "Minimum"
                   ]}
@@ -274,8 +277,10 @@ export function TemperatureCharts({ selectedFloat, timeRange }: TemperatureChart
               />
               <Tooltip
                 formatter={(value, name, props) => {
-                  if (name === "temperature") return [`${parseFloat(value as string).toFixed(1)}°C`, "Temperature"]
-                  return [`${parseFloat(value as string).toFixed(1)}`, name]
+                  if (name === "temperature") {
+                    return [`${Number.isFinite(Number(value)) ? Number(value).toFixed(1) : "0.0"}°C`, "Temperature"]
+                  }
+                  return [`${Number.isFinite(Number(value)) ? Number(value).toFixed(1) : "0.0"}`, name]
                 }}
                 labelFormatter={(label, payload) => {
                   if (payload && payload[0]) {

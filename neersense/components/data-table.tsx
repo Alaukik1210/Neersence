@@ -11,9 +11,11 @@ import { Download, Search, Filter, Calendar, MapPin } from "lucide-react"
 interface DataTableProps {
   selectedFloat: string
   timeRange: string
+  showUpload?: boolean
+  showExport?: boolean
 }
 
-export function DataTable({ selectedFloat, timeRange }: DataTableProps) {
+export function DataTable({ selectedFloat, timeRange, showUpload = false, showExport = true }: DataTableProps) {
   const [searchTerm, setSearchTerm] = useState("")
   const [sortColumn, setSortColumn] = useState<string | null>(null)
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc")
@@ -142,16 +144,26 @@ export function DataTable({ selectedFloat, timeRange }: DataTableProps) {
                 <Filter className="h-4 w-4 mr-2" />
                 Filters
               </Button>
-              <Button variant="outline" size="sm">
-                <Download className="h-4 w-4 mr-2" />
-                Export CSV
-              </Button>
-              <Button variant="outline" size="sm">
-                <Download className="h-4 w-4 mr-2" />
-                Export NetCDF
-              </Button>
+              {showExport && (
+                <>
+                  <Button variant="outline" size="sm">
+                    <Download className="h-4 w-4 mr-2" />
+                    Export CSV
+                  </Button>
+                  <Button variant="outline" size="sm">
+                    <Download className="h-4 w-4 mr-2" />
+                    Export NetCDF
+                  </Button>
+                </>
+              )}
+              {showUpload && (
+                <Button variant="outline" size="sm">
+                  Upload Data
+                </Button>
+              )}
             </div>
           </div>
+          <p className="text-xs text-muted-foreground mt-3">Time range: {timeRange}</p>
         </CardContent>
       </Card>
 

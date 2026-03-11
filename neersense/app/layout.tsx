@@ -1,23 +1,12 @@
 import type { Metadata } from "next";
-import { Plus_Jakarta_Sans, Unbounded } from "next/font/google";
+// Use local / CSS-based font stack to avoid remote font downloads at build/runtime
 import "./globals.css";
 
 import { AuthProvider } from '@/lib/auth_context';
-// Plus Jakarta Sans
-const jakartaSans = Plus_Jakarta_Sans({
-  variable: "--font-jakarta-sans",
-  subsets: ["latin"],
-  weight: ["200","300","400","500","600","700","800"], 
-  style: ["normal", "italic"],
-});
-
-// Poppins (optional)
-const unbounded = Unbounded({
-  variable: "--font-unbounded",
-  subsets: ["latin"],
-  weight: ["200","300","400","500","600","700","800"],
-  style: ["normal"],
-});
+// We're not using next/font/google here to avoid Next.js trying to fetch
+// fonts from Google (fonts.gstatic.com). The project already defines
+// font-family CSS variables in `globals.css` and provides utility classes
+// `.font-jakarta` and `.font-unbounded` — we'll use those instead.
 
 export const metadata: Metadata = {
   title: "Create Next App",
@@ -29,7 +18,7 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
-      <body className={`${jakartaSans.variable} ${unbounded.variable} antialiased primary`}>
+      <body className={`font-jakarta font-unbounded antialiased primary`}>
          <AuthProvider>
           {children}
         </AuthProvider>

@@ -1,77 +1,111 @@
-import { Activity, AlertCircle, BarChart3, CheckCircle, Database, Download, FileText, Upload, Zap } from 'lucide-react';
-import { useState } from 'react';
+import type { ChangeEvent } from 'react'
+import { Activity, BarChart3, Database, Upload, Zap } from 'lucide-react'
+import { useState } from 'react'
+
+type ParameterKey = 'pres' | 'temp' | 'psal'
+
+interface ParameterStats {
+  count: number
+  mean: number | null
+  std: number | null
+  min: number | null
+  max: number | null
+}
+
+interface UploadResult {
+  download_url?: string
+  filename?: string
+  metadata?: {
+    statistics?: Record<string, ParameterStats>
+  }
+}
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_NETCDF_API_URL ?? 'http://localhost:5000'
 
 const NetCDFUploader = () => {
-  const [file, setFile] = useState(null);
-  const [uploading, setUploading] = useState(false);
-  const [result, setResult] = useState(null);
-  const [error, setError] = useState(null);
-  const [binSize, setBinSize] = useState(10);
+  const [file, setFile] = useState<File | null>(null)
+  const [uploading, setUploading] = useState(false)
+  const [result, setResult] = useState<UploadResult | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [binSize, setBinSize] = useState(10)
 
-  const handleFileChange = (e) => {
-    const selectedFile = e.target.files[0];
+  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = e.target.files?.[0] ?? null
     if (selectedFile?.name?.toLowerCase().endsWith('.nc')) {
-      setFile(selectedFile);
-      setError(null);
+      setFile(selectedFile)
+      setError(null)
     } else {
-      setError('Please select a valid .nc (NetCDF) file');
-      setFile(null);
+      setError('Please select a valid .nc (NetCDF) file')
+      setFile(null)
     }
-  };
+  }
 
   const handleUpload = async () => {
-    if (!file) return setError('Please select a file first');
+    if (!file) {
+      setError('Please select a file first')
+      return
+    }
 
-    setUploading(true);
-    setError(null);
+    setUploading(true)
+    setError(null)
 
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('bin_size', binSize);
+    const formData = new FormData()
+    formData.append('file', file)
+    formData.append('bin_size', String(binSize))
 
     try {
-      const res = await fetch('http://localhost:5000/upload', {
+      const res = await fetch(`${API_BASE_URL}/upload`, {
         method: 'POST',
         body: formData,
-      });
-      const data = await res.json();
-      if (res.ok) setResult(data);
-      else setError(data.error || 'Upload failed');
-    } catch (err) {
-      setError(`Network error: ${err.message}`);
+      })
+      const data = (await res.json().catch(() => ({}))) as UploadResult & { error?: string }
+      if (res.ok) {
+        setResult(data)
+      } else {
+        setResult(null)
+        setError(data.error || 'Upload failed')
+      }
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Unknown network error'
+      setResult(null)
+      setError(`Network error: ${message}`)
     } finally {
-      setUploading(false);
+      setUploading(false)
     }
-  };
+  }
 
   const handleDownload = async () => {
-    if (!result?.download_url) return;
+    if (!result?.download_url) return
+
     try {
-      const res = await fetch(`http://localhost:5000${result.download_url}`);
-      const blob = await res.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = result.filename || 'processed.csv';
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
+      const res = await fetch(`${API_BASE_URL}${result.download_url}`)
+      if (!res.ok) {
+        throw new Error(`Download request failed: ${res.status}`)
+      }
+      const blob = await res.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = result.filename || 'processed.csv'
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
     } catch {
-      setError('Download failed');
+      setError('Download failed')
     }
-  };
+  }
 
   const renderStatistics = () => {
-    if (!result?.metadata?.statistics) return null;
-    const stats = result.metadata.statistics;
+    if (!result?.metadata?.statistics) return null
+    const stats = result.metadata.statistics
 
-    const parameterNames = { pres: 'Pressure', temp: 'Temperature', psal: 'Salinity' };
-    const parameterIcons = { pres: Activity, temp: Zap, psal: Database };
-    const parameterColors = {
+    const parameterNames: Record<ParameterKey, string> = { pres: 'Pressure', temp: 'Temperature', psal: 'Salinity' }
+    const parameterIcons: Record<ParameterKey, typeof Activity> = { pres: Activity, temp: Zap, psal: Database }
+    const parameterColors: Record<ParameterKey, string> = {
       pres: 'from-blue-400 to-cyan-500',
       temp: 'from-orange-400 to-red-500',
       psal: 'from-teal-400 to-emerald-500',
-    };
+    }
 
     return (
       <div className="bg-slate-800/50 backdrop-blur-sm rounded-2xl shadow-2xl p-8 mb-8 border border-slate-700/50">
@@ -86,8 +120,11 @@ const NetCDFUploader = () => {
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {Object.entries(stats).map(([col, stat]) => {
-            const Icon = parameterIcons[col] || Activity;
-            const gradient = parameterColors[col] || 'from-slate-500 to-slate-600';
+            const key = (col in parameterNames ? col : null) as ParameterKey | null
+            const Icon = key ? parameterIcons[key] : Activity
+            const gradient = key ? parameterColors[key] : 'from-slate-500 to-slate-600'
+            const displayName = key ? parameterNames[key] : col.toUpperCase()
+
             return (
               <div key={col} className="group hover:scale-105 transition-all duration-300">
                 <div className="bg-slate-700/50 backdrop-blur-sm rounded-xl p-6 border border-slate-600/50 hover:border-cyan-400/50 hover:shadow-xl hover:shadow-cyan-500/10">
@@ -99,7 +136,7 @@ const NetCDFUploader = () => {
                       {stat.count} samples
                     </span>
                   </div>
-                  <h4 className="font-bold text-lg text-slate-100 mb-3">{parameterNames[col] || col.toUpperCase()}</h4>
+                  <h4 className="font-bold text-lg text-slate-100 mb-3">{displayName}</h4>
                   <div className="space-y-3">
                     {stat.mean !== null && (
                       <div className="flex justify-between items-center">
@@ -128,12 +165,12 @@ const NetCDFUploader = () => {
                   </div>
                 </div>
               </div>
-            );
+            )
           })}
         </div>
       </div>
-    );
-  };
+    )
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
@@ -176,6 +213,11 @@ const NetCDFUploader = () => {
             <button onClick={handleUpload} disabled={!file || uploading}>
               {uploading ? 'Processing...' : 'Upload & Process'}
             </button>
+            {result?.download_url && (
+              <button onClick={handleDownload} className="block">
+                Download Processed File
+              </button>
+            )}
           </div>
         </div>
 
@@ -183,7 +225,7 @@ const NetCDFUploader = () => {
         {result && renderStatistics()}
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default NetCDFUploader;
+export default NetCDFUploader
